@@ -43,9 +43,9 @@ jobs:
         run: |
           echo "Validando imports..."
           python -c "import sys; print(f' Python {sys.version}')"
-          python -c "import github; print(f' PyGithub {github.__version__}')"
-          python -c "import pandas; print(f' Pandas {pandas.__version__}')"
-          python -c "import numpy; print(f' Numpy {numpy.__version__}')"
+          python -c "import github; print(' PyGithub instalado')"
+          python -c "import pandas as pd; print(f' Pandas {pd.__version__}')"
+          python -c "import numpy as np; print(f' Numpy {np.__version__}')"
           python -c "import openpyxl; print(' openpyxl instalado')"
 
       - name: Validar imports opcionais (não falha)
@@ -93,6 +93,9 @@ jobs:
       - name: Resumo do Build
         if: success()
         run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo " BUILD CONCLUÍDO COM SUCESSO"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "Python: ${{ matrix.python-version }}"
           echo "Status: Todos os testes passaram"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
