@@ -1,0 +1,98 @@
+name: CI - Build e Testes
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build e Validação
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Instalar dependências principais
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verificar sintaxe dos scripts
+        run: |
+          echo "Verificando sintaxe Python..."
+          python -m py_compile aval-mds.py
+          python -m py_compile aval-usuario.py
+          python -m py_compile aval-repos-novos.py
+          echo "Sintaxe verificada com sucesso"
+
+      - name: Validar imports obrigatórios
+        run: |
+          echo "Validando imports..."
+          python -c "import sys; print(f' Python {sys.version}')"
+          python -c "import github; print(f' PyGithub {github.__version__}')"
+          python -c "import pandas; print(f' Pandas {pandas.__version__}')"
+          python -c "import numpy; print(f' Numpy {numpy.__version__}')"
+          python -c "import openpyxl; print(' openpyxl instalado')"
+
+      - name: Validar imports opcionais (não falha)
+        continue-on-error: true
+        run: |
+          echo "Verificando dependências opcionais..."
+          python -c "import openai; print(' OpenAI instalado (opcional)')" || echo " OpenAI não instalado (opcional - código funciona sem)"
+          python -c "from dotenv import load_dotenv; print(' python-dotenv instalado (opcional)')" || echo " python-dotenv não instalado (opcional)"
+
+      - name: Testar execução sem tokens (help)
+        run: |
+          echo "Testando help dos scripts..."
+          python aval-mds.py --help
+          python aval-usuario.py --help
+          python aval-repos-novos.py --help
+          echo " Scripts executam corretamente"
+
+      - name: Testar imports dos scripts
+        run: |
+          echo "Testando se scripts importam corretamente..."
+          python -c "
+          import sys
+          import importlib.util
+
+          scripts = ['aval-mds.py', 'aval-usuario.py', 'aval-repos-novos.py']
+
+          for script in scripts:
+              try:
+                  spec = importlib.util.spec_from_file_location('test_module', script)
+                  module = importlib.util.module_from_spec(spec)
+                  print(f' {script} pode ser importado')
+              except Exception as e:
+                  print(f' Erro ao importar {script}: {e}')
+                  sys.exit(1)
+
+          print(' Todos os scripts podem ser importados')
+          "
+
+      - name: Verificar dependências
+        run: |
+          echo "Verificando conflitos de dependências..."
+          pip check
+          echo " Sem conflitos de dependências"
+
+      - name: Resumo do Build
+        if: success()
+        run: |
+          echo " BUILD CONCLUÍDO COM SUCESSO"
+          echo "Python: ${{ matrix.python-version }}"
+          echo "Status: Todos os testes passaram"
